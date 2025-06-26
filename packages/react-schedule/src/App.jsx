@@ -14,7 +14,11 @@ function App() {
         onFinish={async values => {
           console.log(values);
           setFormValues(values);
-        }}>
+        }}
+        onReset={() => {
+          setFormValues({});
+        }}
+      >
         <ProFormText name="name" label="姓名" />
         <ProForm.Item name="schedule" label="日程">
           <ProFormSchedule />
