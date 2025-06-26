@@ -31,7 +31,7 @@
     "typescript": "^3.7.5"
   },
   "devEngines": {
-    "node": "16.x || 18.x || 20.x || 22.x"
+    "node": "20.19.x || 22.12.x"
   },
   "resolutions": {
     "react-is": "npm:react-is",
