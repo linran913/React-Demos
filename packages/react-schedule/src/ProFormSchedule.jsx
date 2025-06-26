@@ -16,6 +16,8 @@ export default function ProFormSchedule(props) {
     <Schedule
       id={id}
       ref={ref}
+      width={800}
+      divider={2}
       value={scheduleValue}
       onValueChange={handleValueChange}
       datasource={datasource}
