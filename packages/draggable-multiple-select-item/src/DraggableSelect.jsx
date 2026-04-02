@@ -9,6 +9,7 @@ import {
 } from '@dnd-kit/core';
 import {
   arrayMove,
+  defaultAnimateLayoutChanges,
   horizontalListSortingStrategy,
   SortableContext,
   useSortable,
@@ -68,9 +69,18 @@ const TagItemRender = props => {
     event.stopPropagation();
   };
 
+  const animateLayoutChanges = args => {
+    if (!args.isSorting && activeId === value.id) {
+      return false;
+    }
+
+    return defaultAnimateLayoutChanges(args);
+  };
+
   const {attributes, listeners, transform, transition, isDragging, setNodeRef} =
     useSortable({
       id: value.id,
+      animateLayoutChanges,
     });
 
   const style = {
