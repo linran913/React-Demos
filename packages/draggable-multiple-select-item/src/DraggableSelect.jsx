@@ -1,6 +1,7 @@
 import {Select, Tag} from 'antd';
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
   closestCenter,
   useSensor,
@@ -51,16 +52,14 @@ const options = [
   },
 ];
 
-const tagRender = props => <TagItemRender tag={props} key={props.label} />;
-
 const commonStyle = {
   marginInlineEnd: 4,
   cursor: 'move',
-  transition: 'unset', // Prevent element from shaking after drag
 };
 
 const TagItemRender = props => {
   const {
+    activeId,
     tag: {label, value, closable, onClose},
   } = props;
 
@@ -69,18 +68,18 @@ const TagItemRender = props => {
     event.stopPropagation();
   };
 
-  const {listeners, transform, transition, isDragging, setNodeRef} =
+  const {attributes, listeners, transform, transition, isDragging, setNodeRef} =
     useSortable({
       id: value.id,
     });
-  console.log('useSortable', transform);
-  const style = transform
-    ? {
-        ...commonStyle,
-        transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
-        transition: isDragging ? 'unset' : transition, // Improve performance/visual effect when dragging
-      }
-    : commonStyle;
+
+  const style = {
+    ...commonStyle,
+    opacity: isDragging && activeId === value.id ? 0 : 1,
+    transform: CSS.Transform.toString(transform),
+    transition: isDragging ? 'unset' : transition,
+  };
+
   return (
     <Tag
       key={value.id}
@@ -88,9 +87,23 @@ const TagItemRender = props => {
       style={style}
       closable={closable}
       onClose={onClose}
+      onMouseDown={onPreventMouseDown}
       ref={setNodeRef}
+      {...attributes}
       {...listeners}>
       {label}
+    </Tag>
+  );
+};
+
+const DragOverlayTag = ({item}) => {
+  if (!item) {
+    return null;
+  }
+
+  return (
+    <Tag color={item.value.text} style={commonStyle}>
+      {item.label}
     </Tag>
   );
 };
@@ -130,31 +143,65 @@ const DraggableSelect = () => {
       },
     },
   ]);
-  const sensors = useSensor(PointerSensor);
+  const [activeTagId, setActiveTagId] = useState(null);
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 4,
+      },
+    }),
+  );
+
+  const activeTag = tagItems.find(item => item.value.id === activeTagId);
+
+  const handleDragStart = event => {
+    setActiveTagId(event.active.id);
+  };
+
+  const clearActiveTag = () => {
+    requestAnimationFrame(() => {
+      setActiveTagId(null);
+    });
+  };
+
   const handleDragEnd = event => {
     const {active, over} = event;
+
     if (!over) {
+      clearActiveTag();
       return;
     }
+
     if (active.id !== over.id) {
       setTagItems(data => {
-        const oldIndex = data.findIndex(item => item.key === active.id);
-        const newIndex = data.findIndex(item => item.key === over.id);
+        const oldIndex = data.findIndex(item => item.value.id === active.id);
+        const newIndex = data.findIndex(item => item.value.id === over.id);
         return arrayMove(data, oldIndex, newIndex);
       });
     }
+
+    clearActiveTag();
   };
+
+  const handleDragCancel = () => {
+    setActiveTagId(null);
+  };
+
   return (
     <DndContext
-      sensors={[sensors]}
+      sensors={sensors}
+      onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
       collisionDetection={closestCenter}>
       <SortableContext
-        items={tagItems}
+        items={tagItems.map(item => item.value.id)}
         strategy={horizontalListSortingStrategy}>
         <Select
           mode="multiple"
-          tagRender={tagRender}
+          tagRender={tag => (
+            <TagItemRender tag={tag} activeId={activeTagId} key={tag.label} />
+          )}
           value={tagItems}
           style={{
             width: '100%',
@@ -162,6 +209,9 @@ const DraggableSelect = () => {
           options={options}
         />
       </SortableContext>
+      <DragOverlay dropAnimation={null}>
+        <DragOverlayTag item={activeTag} />
+      </DragOverlay>
     </DndContext>
   );
 };
